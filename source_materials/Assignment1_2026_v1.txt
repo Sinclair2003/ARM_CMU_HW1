@@ -1,0 +1,204 @@
+"""
+Stock Cointegration Analysis
+Analyzes correlations and cointegration among a set of stocks
+using daily close prices from Yahoo Finance.
+
+Dependencies:
+    pip install yfinance seaborn statsmodels matplotlib pandas numpy
+"""
+
+import numpy as np
+import pandas as pd
+import statsmodels.api as sm
+import seaborn as sns
+import matplotlib.pyplot as plt
+import yfinance as yf
+from statsmodels.tsa.stattools import coint
+
+
+# ── Configuration ─────────────────────────────────────────────────────────────
+
+SYMBOL_LIST = [
+    'AAPL', 'AMZN', 'GOOG', 'CSCO', 'IBM',
+    'INTC', 'KO',   'PEP',  'MSFT', 'CRM',
+    'TGT',  'WMT',
+]
+
+START_DATE = '2014-01-01'
+END_DATE   = '2025-03-25'
+
+
+# ── Data Download ──────────────────────────────────────────────────────────────
+
+def download_stock_data(symbols: list[str], start_date: str, end_date: str) -> pd.DataFrame:
+    """
+    Download daily adjusted close prices for a list of ticker symbols.
+
+    Parameters
+    ----------
+    symbols    : list of ticker strings
+    start_date : 'YYYY-MM-DD' start of date range
+    end_date   : 'YYYY-MM-DD' end of date range
+
+    Returns
+    -------
+    pd.DataFrame with dates as index and tickers as columns
+    """
+    raw = yf.download(symbols, start=start_date, end=end_date, auto_adjust=True)
+
+    # yfinance returns MultiIndex columns when >1 ticker; flatten to Close only
+    if isinstance(raw.columns, pd.MultiIndex):
+        data = raw['Close']
+    else:
+        data = raw[['Close']]
+        data.columns = symbols
+
+    data.dropna(how='all', inplace=True)
+    return data
+
+
+# ── Correlation Heatmap ────────────────────────────────────────────────────────
+
+def generate_correlation_heatmap(data: pd.DataFrame) -> None:
+    """
+    Plot a Pearson correlation heatmap of raw close prices (price levels).
+
+    NOTE: Correlating non-stationary price levels produces artificially high
+    coefficients driven by shared upward trends rather than genuine co-movement.
+    This is intentional here to illustrate spurious correlation — pairs that
+    look tightly linked in price space may have no meaningful economic relationship.
+
+    Parameters
+    ----------
+    data : DataFrame of close prices (dates × tickers)
+    """
+    matrix = data.corr().round(2)
+
+    fig, ax = plt.subplots(figsize=(14, 10))
+    sns.heatmap(
+        matrix,
+        cmap='RdYlGn_r',
+        annot=True,
+        fmt='.2f',
+        linewidths=0.5,
+        ax=ax,
+    )
+    ax.set_title(
+        'Correlation Heatmap of Price Levels\n'
+        '(inflated by shared trends — illustrates spurious correlation)',
+        fontsize=13, pad=12,
+    )
+    plt.tight_layout()
+    plt.show()
+
+
+# ── Cointegration Analysis ─────────────────────────────────────────────────────
+
+def find_cointegrated_pairs(
+    data: pd.DataFrame,
+    symbols: list[str],
+    pvalue_threshold: float = 0.10,
+) -> tuple[np.ndarray, np.ndarray, list[tuple], np.ndarray]:
+    """
+    Perform pairwise Engle-Granger cointegration tests.
+
+    Parameters
+    ----------
+    data              : DataFrame of close prices (dates × tickers)
+    symbols           : ordered list of ticker strings
+    pvalue_threshold  : significance level for flagging pairs (default 0.10)
+
+    Returns
+    -------
+    score_matrix  : (n×n) array of ADF test statistics
+    pvalue_matrix : (n×n) array of p-values  (lower-triangle unused / ones)
+    pairs         : list of (sym_i, sym_j) tuples that pass the threshold
+    beta_matrix   : (n×n) array of OLS hedge ratios
+    """
+    n             = len(symbols)
+    score_matrix  = np.zeros((n, n))
+    pvalue_matrix = np.ones((n, n))
+    beta_matrix   = np.zeros((n, n))
+    pairs: list[tuple] = []
+
+    for i in range(n):
+        for j in range(i + 1, n):
+            s1 = data[symbols[i]].dropna()
+            s2 = data[symbols[j]].dropna()
+
+            # Align on common dates
+            s1, s2 = s1.align(s2, join='inner')
+
+            score, pvalue, _ = coint(s1, s2)
+            model = sm.OLS(s1, sm.add_constant(s2)).fit()
+
+            score_matrix[i, j]  = score
+            pvalue_matrix[i, j] = pvalue
+            beta_matrix[i, j]   = model.params.iloc[1]
+
+            if pvalue < pvalue_threshold:
+                pairs.append((symbols[i], symbols[j]))
+
+    return score_matrix, pvalue_matrix, pairs, beta_matrix
+
+
+# ── Cointegration Heatmap ──────────────────────────────────────────────────────
+
+def plot_cointegration_heatmap(
+    pvalue_matrix: np.ndarray,
+    symbols: list[str],
+    pvalue_threshold: float = 0.10,
+) -> None:
+    """
+    Plot a heatmap of cointegration p-values, masking non-significant pairs.
+
+    Parameters
+    ----------
+    pvalue_matrix     : (n×n) array from find_cointegrated_pairs
+    symbols           : ordered list of ticker strings
+    pvalue_threshold  : mask cells at or above this value (default 0.10)
+    """
+    fig, ax = plt.subplots(figsize=(10, 9))
+    sns.heatmap(
+        pvalue_matrix,
+        xticklabels=symbols,
+        yticklabels=symbols,
+        cmap='RdYlGn_r',
+        mask=(pvalue_matrix >= pvalue_threshold),
+        annot=True,
+        fmt='.2f',
+        linewidths=0.5,
+        ax=ax,
+    )
+    ax.set_title(
+        f'Cointegration p-values (threshold < {pvalue_threshold})',
+        fontsize=14, pad=12,
+    )
+    plt.tight_layout()
+    plt.show()
+
+
+# ── Main ───────────────────────────────────────────────────────────────────────
+
+if __name__ == '__main__':
+    print('Downloading price data …')
+    data = download_stock_data(SYMBOL_LIST, START_DATE, END_DATE)
+    print(f'  Loaded {len(data)} trading days for {len(data.columns)} tickers.\n')
+
+    print('Generating correlation heatmap …')
+    generate_correlation_heatmap(data)
+
+    print('Running pairwise cointegration tests …')
+    scores, pvalues, pairs, betas = find_cointegrated_pairs(data, SYMBOL_LIST)
+
+    print(f'\nCointegrated pairs (p < 0.10):')
+    if pairs:
+        for sym_a, sym_b in pairs:
+            i = SYMBOL_LIST.index(sym_a)
+            j = SYMBOL_LIST.index(sym_b)
+            print(f'  {sym_a} / {sym_b}  —  p={pvalues[i, j]:.4f}  beta={betas[i, j]:.4f}')
+    else:
+        print('  None found.')
+
+    print('\nGenerating cointegration heatmap …')
+    plot_cointegration_heatmap(pvalues, SYMBOL_LIST)
