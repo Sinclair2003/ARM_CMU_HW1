@@ -322,10 +322,10 @@ def build():
         )
     )
     story.append(p("Appendix: Python Code", ST["Heading1"]))
-    story.append(p("The working Colab-ready notebook is provided in:", ST["BodyText"]))
-    story.append(p("notebook/pairs_trading_colab.ipynb", ST["CodeBlock"]))
+    story.append(p("The working assignment notebook is provided in:", ST["BodyText"]))
+    story.append(p("notebook/assignment1_pairs_trading_report.ipynb", ST["CodeBlock"]))
     story.append(p("The equivalent Python script is provided in:", ST["BodyText"]))
-    story.append(p("notebook/pairs_trading_colab.py", ST["CodeBlock"]))
+    story.append(p("notebook/assignment1_pairs_trading_report.py", ST["CodeBlock"]))
     story.append(
         p(
             "The code downloads data from Yahoo Finance, computes correlations, estimates OLS hedge ratios, runs Engle-Granger "

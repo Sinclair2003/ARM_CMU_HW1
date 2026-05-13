@@ -17,8 +17,8 @@
 # %% [markdown]
 # ## 1. Install Dependencies
 #
-# Run this cell in Google Colab. If the packages are already installed, Colab
-# will simply report that the requirements are satisfied.
+# Run this setup cell before the analysis. If the packages are already installed,
+# Python will simply report that the requirements are satisfied.
 
 # %%
 # !pip install yfinance statsmodels seaborn -q
@@ -432,7 +432,7 @@ for summary in all_summaries:
 # %% [markdown]
 # ## 8. Optional: Export Summary Table
 #
-# In Colab, uncomment the next line if you want to download the results table as CSV.
+# Uncomment the next line if you want to export the results table as CSV.
 
 # %%
 # summary_display.to_csv("pairs_trading_summary.csv", index=False)

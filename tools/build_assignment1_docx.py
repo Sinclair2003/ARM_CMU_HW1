@@ -355,10 +355,10 @@ def build_doc():
     )
 
     doc.add_heading("Appendix: Python Code", level=1)
-    doc.add_paragraph("The working Colab-ready notebook is provided in:")
-    add_code_block(doc, "notebook/pairs_trading_colab.ipynb")
+    doc.add_paragraph("The working assignment notebook is provided in:")
+    add_code_block(doc, "notebook/assignment1_pairs_trading_report.ipynb")
     doc.add_paragraph("The equivalent Python script is provided in:")
-    add_code_block(doc, "notebook/pairs_trading_colab.py")
+    add_code_block(doc, "notebook/assignment1_pairs_trading_report.py")
     doc.add_paragraph(
         "The code downloads data from Yahoo Finance, computes correlations, estimates OLS hedge ratios, runs "
         "Engle-Granger cointegration tests, constructs spreads and rolling z-scores, backtests the trading strategy, "
