@@ -174,13 +174,13 @@ Important limitations include:
 The working Colab-ready notebook is provided in:
 
 ```text
-pairs_trading_colab.ipynb
+notebook/pairs_trading_colab.ipynb
 ```
 
 The equivalent Python script is provided in:
 
 ```text
-pairs_trading_colab.py
+notebook/pairs_trading_colab.py
 ```
 
 The code downloads data from Yahoo Finance, computes correlations, estimates OLS hedge ratios, runs Engle-Granger cointegration tests, constructs spreads and rolling z-scores, backtests the trading strategy, and reports total return, Sharpe ratio, and maximum drawdown.
